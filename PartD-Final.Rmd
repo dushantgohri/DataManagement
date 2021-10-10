@@ -1,0 +1,133 @@
+---
+title: "Data Management"
+author: "Dushant Gohri"
+date: "2020/11/30"
+output:
+  word_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+```
+
+Installing necessary packages for Data Management to work,
+
+```{r PART C1, Eval=FALSE, warning=FALSE}
+#install.packages("tidyverse")
+#install.packages("plotly")
+#install.packages("shinydashboard")
+#install.packages("anchors")
+#install.packages("shiny")
+#install.packages("ggplot2")
+#install.packages('devtools') 
+library(devtools) 
+#install_github("ramnathv/rCharts")
+
+library("plyr")
+library(plotly)
+library(shinydashboard)
+library(anchors)
+library(shiny)
+library(ggplot2)
+
+
+library(rCharts)
+library(leaflet)
+
+```
+
+
+### 2.A graphical representation of the rating values as obtained from the parsing of the XML document.
+```{r part D,warning=FALSE}
+
+#data_result_C <- get(load("./data_result_C.RData"))
+data_result_C <- readRDS("./data_result_C.rds")
+
+
+bb_data <- data_result_C
+##Change the class of LocalAuthorityName an RatingValue to prepare for the following operation and to make it more proper way to show in the table
+
+bb_data$LocalAuthorityName <- as.factor(bb_data$LocalAuthorityName)
+bb_data$RatingValue <- as.factor(bb_data$RatingValue)
+
+ui <- dashboardPage(
+  dashboardHeader(title = "G7 Food Hygiene Ratings Scheme Data"),
+    dashboardSidebar(
+    sidebarMenu(
+      menuItem("Data", tabName = "dataset"),
+      menuItem("Presence in UK",tabName = "chart_1"),
+      menuItem("Location Wise Ratings",tabName = "chart_2")
+    )),
+  dashboardBody(
+    tabItems(
+      # first tab named "dataset"
+      tabItem(tabName = "dataset",
+              fluidRow(h1("DATASET")),
+              fluidRow(column(width = 12,DT::dataTableOutput("resulttable")))
+              ),
+      
+      # second tab named "chart_1"
+      tabItem(tabName = "chart_1",
+              fluidRow(column(width=12, h1("Map"))),
+              fluidPage( navbarPage("", id="main", tabPanel("Map", leafletOutput("bbmap", height=1000))))
+              ),
+      #third tab named "chart_2"
+    tabItem(tabName = "chart_2",
+            fluidRow(column(width = 12, h1("Local Authority Wise Ratings"))),
+            fluidRow(column(width = 10, selectInput("LocalAuthorityName","select Local Authority",choices = c("Select", levels(bb_data$LocalAuthorityName)), selected = "Select")
+                            )),
+            fluidRow(column(width = 12,plotlyOutput("ratingsdata")))
+            )
+    ) 
+    )
+  )
+
+server<-function(input, output) {
+  
+  changefactor <- c("AwaitingInspection" = "Awaiting Inspection", "AwaitingPublication" = "Awaiting Publication")
+  bb_data$RatingValue <- revalue(bb_data$RatingValue, changefactor)
+  bb_data<-bb_data %>% filter(!is.na(Latitude)) %>% filter(!is.na(Longitude)) 
+  sapply(bb_data, class)
+  
+  output$resulttable = DT::renderDataTable(bb_data)
+  
+  # create a color for different rating value 
+ Col <- colorFactor(topo.colors(12), bb_data$RatingValue)
+  
+  output$bbmap <- renderLeaflet({
+    leaflet(bb_data) %>% 
+      addTiles() %>%
+      addCircles(lng = ~Longitude, lat = ~Latitude,
+          color = ~Col(RatingValue),
+          radius = 2,
+          stroke = T, 
+          fillOpacity = 1,
+          popup=paste(
+            "Rating:", bb_data$RatingValue, "<br>",
+            "Business:", bb_data$BusinessName, "<br>",
+            "Area:", bb_data$LocalAuthorityName, "<br>"))
+  })
+  
+    output$ratingsdata <- renderPlotly({
+      if(input$LocalAuthorityName=="Select"){
+        output<-ggplot((bb_data),aes(x=RatingValue))+geom_bar()  
+        scale_fill_hue(l=40, c=35)
+        ggplotly(output)
+      }
+      else{
+        to_filter <- input$LocalAuthorityName
+        output <- ggplot(subset(bb_data,LocalAuthorityName==to_filter),aes(x=RatingValue))+geom_bar()  
+        scale_fill_hue(l=40, c=35)   
+        ggplotly(output)}
+  
+  })
+  
+}
+
+shinyApp(ui = ui, server = server)
+
+```

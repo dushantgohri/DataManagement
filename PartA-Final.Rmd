@@ -1,0 +1,426 @@
+---
+title: "Data Management"
+author: "Dushant Gohri"
+date: "2020/11/30"
+output:
+  word_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## R Markdown
+
+
+Installing necessary packages for Data Management to work,
+
+```{r Packages for Data Management Part A to work}
+# install.packages("tidyverse")
+# install.packages("janitor")
+
+library("tidyverse")
+
+library("dplyr")
+library("janitor")
+library("tidyr")
+
+library(plyr)
+
+library(stringr)
+library(rebus)
+
+library(readr)
+library(RSQLite)
+
+```
+
+#Connect to SQLite
+```{r} 
+
+myconn <- RSQLite::dbConnect(RSQLite::SQLite(),"HotelManagement.db")
+
+```
+
+
+#Creating table hotel and dropping the table if it already exists
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn,"DROP TABLE IF EXISTS `Hotel`")
+RSQLite::dbSendQuery(myconn, "CREATE TABLE `Hotel`  (
+  `Hotel_Id` int(11) NOT NULL,
+  `Hotel_name` varchar(255)  NOT NULL,
+  `Hotel_WebsiteUrl` varchar(255) NOT NULL,
+  `Hotel_Phone` varchar(255) NOT NULL,
+  `Hotel_StreetNumber` varchar(255) NOT NULL,
+  `Hotel_StreetName` varchar(255) NOT NULL,
+  `Hotel_City` varchar(255) NOT NULL,
+  `Hotel_State` varchar(255) NOT NULL,
+  `Hotel_PostalCode` varchar(255) NOT NULL,
+  PRIMARY KEY (`Hotel_Id`) 
+)")
+
+
+
+```
+
+
+
+
+
+#Creating table customer and dropping the table if it already exists
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn,"DROP TABLE IF EXISTS `Guest`")
+RSQLite::dbSendQuery(myconn, "CREATE TABLE `Guest`  (
+  `Guest_Id` int(11) NOT NULL,
+  `Guest_FirstName` varchar(255) NOT NULL,
+  `Guest_MiddleName` varchar(255) DEFAULT NULL,
+  `Guest_LastName` varchar(255) NOT NULL,
+  `Guest_Email` varchar(255) NOT NULL,
+  `Guest_WorkPhone` varchar(255) DEFAULT NULL,
+  `Guest_HomePhone` varchar(255) DEFAULT NULL,
+  `Guest_CellPhone` varchar(255) DEFAULT NULL,
+  `Guest_StreetNumber` varchar(255) NOT NULL,
+  `Guest_StreetName` varchar(255) NOT NULL,
+  `Guest_City` varchar(255) NOT NULL,
+  `Guest_State` varchar(255) NOT NULL,
+  `Guest_Country` varchar(255) NOT NULL,
+  `Guest_PostalCode` varchar(255) NOT NULL,
+  PRIMARY KEY (`Guest_Id`)
+)")
+```
+
+
+#Creating table channel and dropping the table if it already exists
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn,"DROP TABLE IF EXISTS `Channel`")
+RSQLite::dbSendQuery(myconn, "CREATE TABLE `Channel`  (
+  `Channel_Id` int(11) NOT NULL,
+  `Channel_Name` varchar(255) NOT NULL,
+  `Hotel_Id` int(11) NULL DEFAULT NULL,
+  `Channel_BookingFee` decimal(8, 2) NOT NULL,
+  PRIMARY KEY (`Channel_Id`) ,
+  CONSTRAINT `fk_1` FOREIGN KEY (`Hotel_Id`) REFERENCES `Hotel` (`Hotel_Id`)
+)")
+
+```
+
+
+
+
+
+#Creating table GuestTransaction and dropping the table if it already exists
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "DROP TABLE IF EXISTS `GuestTransaction`");
+RSQLite::dbSendQuery(myconn, "CREATE TABLE `GuestTransaction`  (
+  `Trans_Id` int(11) NOT NULL,
+  `Guest_Id` int(11) NULL DEFAULT NULL,
+  `Trans_CCNumber` VARCHAR(200) NULL DEFAULT NULL,
+  `Trans_CCIssueDate` VARCHAR(200) NULL DEFAULT NULL,
+  `TD_Id` int(11) NULL DEFAULT NULL,
+  `Trans_CCExpDate` varchar(200) NULL DEFAULT NULL,
+  `Trans_TotalPayment` decimal(8, 2) NULL DEFAULT NULL,
+  `Trans_Date` date NULL DEFAULT NULL,
+  `Trans_Tax` date NULL DEFAULT NULL,
+  PRIMARY KEY (`Trans_Id`),
+  CONSTRAINT `fk1` FOREIGN KEY (`Guest_Id`) REFERENCES `customer` (`Guest_Id`),
+  CONSTRAINT `fk15` FOREIGN KEY (`TD_Id`) REFERENCES `transaction_Description` (`TD_Id`)
+)");
+
+```
+
+
+
+#Creating table Transaction_Description and dropping the table if it already exists
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "DROP TABLE IF EXISTS `Transaction_Description`");
+RSQLite::dbSendQuery(myconn, "CREATE TABLE `Transaction_Description`  (
+  `TD_Id` int(11) NOT NULL,
+  `Trans_Description` varchar(255) NOT NULL,
+  PRIMARY KEY (`TD_Id`)
+)");
+
+```
+
+
+
+
+#Creating table invoice and dropping the table if it already exists
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "DROP TABLE IF EXISTS `Invoice`");
+RSQLite::dbSendQuery(myconn, "CREATE TABLE `Invoice`  (
+  `Invoice_Id` int(11) NOT NULL,
+  `Trans_Id` int(11) NULL DEFAULT NULL,
+  `Guest_ID` int(11) NULL DEFAULT NULL,
+  `Invoice_Name` varchar(255) DEFAULT NULL,
+  `Invoice_TotalAmount` decimal(8, 2) NOT NULL,
+  `Invoice_TotalBalance` decimal(8, 2) NOT NULL,
+  `Invoice_OtherCharges` decimal(8, 2) NULL DEFAULT NULL,
+  `Invoice_Tax` decimal(8, 2) NOT NULL,
+  `Invoice_Date` date NOT NULL,
+  PRIMARY KEY (`Invoice_Id`),
+  CONSTRAINT `fk5` FOREIGN KEY (`Trans_Id`) REFERENCES `transaction` (`Trans_Id`),
+  CONSTRAINT `fk6` FOREIGN KEY (`Guest_ID`) REFERENCES `customer` (`Guest_Id`)
+)");
+
+```
+
+
+
+
+#Creating table reservation and dropping the table if it already exists
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "DROP TABLE IF EXISTS `Reservation`");
+RSQLite::dbSendQuery(myconn, "CREATE TABLE `Reservation` (
+  `Reservation_Id` int(11) NOT NULL,
+  `Hotel_Id` int(11) NULL DEFAULT NULL,
+  `Guest_Id` int(11) NULL DEFAULT NULL,
+  `Channel_Id` int(11) NULL DEFAULT NULL,
+  `Reservation_ArrivalDate` date NOT NULL,
+  `Reservation_DeptDate` date NOT NULL,
+  `Trans_Id` int(11) NULL DEFAULT NULL,
+  `Reservation_Preference` varchar(255) DEFAULT NULL,
+  `Reservation_AddService` varchar(255) DEFAULT NULL,
+  `Reservation_Facilities` varchar(255) DEFAULT NULL,
+  `Reservation_Status` varchar(255) NOT NULL,
+  `Reservation_CCNumber` bigint(20) NOT NULL,
+  `Reservation_CCIssueDate` varchar(255) DEFAULT NULL,
+  `Reservation_CCExpDate` varchar(255) NOT NULL,
+  `Reservation_NumberOfGuests` int(11) NULL DEFAULT NULL,
+  PRIMARY KEY (`Reservation_Id`),
+  CONSTRAINT `fk7` FOREIGN KEY (`Hotel_Id`) REFERENCES `hotel` (`Hotel_Id`),
+  CONSTRAINT `fk8` FOREIGN KEY (`Guest_Id`) REFERENCES `customer` (`Guest_Id`),
+  CONSTRAINT `fk9` FOREIGN KEY (`Channel_Id`) REFERENCES `channel` (`Channel_Id`),
+  CONSTRAINT `fk10` FOREIGN KEY (`Trans_Id`) REFERENCES `transaction` (`Trans_Id`)
+)");
+
+```
+
+
+
+
+
+#Creating table room and dropping the table if it already exists
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "DROP TABLE IF EXISTS `Room`");
+RSQLite::dbSendQuery(myconn, "CREATE TABLE `Room`  (
+  `Room_Id` int(11) NOT NULL,
+  `Reservation_Id` int(11) NULL DEFAULT NULL,
+  `Room_No` int(11) NULL DEFAULT NULL,
+  `Room_Name` varchar(255) DEFAULT NULL,
+  `Room_Beds` int(11) NOT NULL,
+  `Room_IsSmokingArea` Boolean,
+  `Room_Floor` varchar(255) NOT NULL,
+  `Room_Rate` decimal(8, 2) NOT NULL,
+  `Room_Availability` Boolean,
+  `Hotel_Id` int(11) NULL DEFAULT NULL,
+  PRIMARY KEY (`Room_Id`) ,
+  CONSTRAINT `fk11` FOREIGN KEY (`Reservation_Id`) REFERENCES `reservation` (`Reservation_Id`),
+  CONSTRAINT `fk12` FOREIGN KEY (`Hotel_Id`) REFERENCES `hotel` (`Hotel_Id`)
+)");
+
+```
+
+
+
+
+#Creating table guests and dropping the table if it already exists
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "DROP TABLE IF EXISTS `AdditionalGuest`");
+RSQLite::dbSendQuery(myconn, "CREATE TABLE `AdditionalGuest`  (
+  `AddGuest_Id` int(11) NOT NULL,
+  `Reservation_Id` int(11) NULL DEFAULT NULL,
+  `AddGuest_FirstName` varchar(255) DEFAULT NULL,
+  `AddGuest_MiddleName` varchar(255) DEFAULT NULL,
+  `AddGguest_LastName` varchar(255) DEFAULT NULL,
+  `Room_id` int(11) NULL DEFAULT NULL,
+  `AddGuest_DOA` varchar(255) DEFAULT NULL,
+  `AddGuest_DOD` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`AddGuest_Id`),
+  CONSTRAINT `fk13` FOREIGN KEY (`Reservation_Id`) REFERENCES `reservation` (`Reservation_Id`),
+  CONSTRAINT `fk14` FOREIGN KEY (`Room_Id`) REFERENCES `room` (`Room_Id`)
+)");
+```
+
+
+
+##list number of tables in the hotel management database
+```{r  Eval=FALSE, warning=FALSE}
+RSQLite::dbListTables(myconn)
+```
+
+
+
+
+
+##Insert into Channel table 
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "INSERT INTO Channel VALUES 
+(1,'booking.com',1,'50.00')")
+RSQLite::dbSendQuery(myconn, "INSERT INTO Channel VALUES 
+(2,'alibaba.com',1,'60.00')")
+RSQLite::dbSendQuery(myconn, "INSERT INTO Channel VALUES 
+(3,'paytm.com',1,'55.00')")
+RSQLite::dbSendQuery(myconn, "INSERT INTO Channel  VALUES 
+(4,'goibibo',1,'45.00')")
+RSQLite::dbSendQuery(myconn, "INSERT INTO Channel VALUES 
+(5,'makemytrip',1,'90.00')")
+RSQLite::dbSendQuery(myconn, "INSERT INTO Channel VALUES 
+(6,'wizz',1,'59.00')")
+
+
+```
+
+##Insert into Guest table 
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "INSERT INTO Guest VALUES 
+(1,'Dushant','H.','Gohri','abc@gmail.com','634872932','','','heronbank','gibbet hill road','coventry','coventry','United Kingdom','CV47ES')")
+
+RSQLite::dbSendQuery(myconn, "INSERT INTO Guest VALUES 
+(2,'Rashi','H.','singh','singh@gmail.com','634832932','','','House Number -1256','Sector -14','Sonipat','Haryana','India','CV47AL')")
+
+RSQLite::dbSendQuery(myconn, "INSERT INTO Guest VALUES 
+(3,'Tanvi','H.','Sharan','sharan@gmail.com','634823321','','','heronbank','gibbet hill road','coventry','coventry','United Kingdom','FV47GS')")
+
+RSQLite::dbSendQuery(myconn, "INSERT INTO Guest VALUES 
+(4,'rohan','G.','harkara','BIY@gmail.com','6348729812','','','LAKESIDE','5TH AVENUE','coventry','coventry','Australia','HU7ES')")
+
+RSQLite::dbSendQuery(myconn, "INSERT INTO Guest VALUES 
+(5,'MANSI','H.','MAYANI','MAYANI@gmail.com','634872932','','','BLUEBELL','COUNTRYSIDE','coventry','coventry','AUSTRALIA','AS47ES')")
+
+```
+
+##Insert into GuestTransaction table 
+```{r Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "insert into GuestTransaction values (1, 1, '1575778667654323', '5/29/2020',1, '12/4/2021', '408889.53', '12/16/2019', '200');")
+RSQLite::dbSendQuery(myconn, "insert into GuestTransaction values (2, 2, '1575778667254323', '5/29/2020',1, '12/4/2022', '1089.3', '13/16/2019', '310');")
+RSQLite::dbSendQuery(myconn, "insert into GuestTransaction values (3, 3, '5475778667654323', '5/29/2020',1, '18/3/2022', '75889.51', '14/16/2019', '30');")
+RSQLite::dbSendQuery(myconn, "insert into GuestTransaction values (4, 4, '9875778667654323', '5/29/2020',1, '19/5/2030', '8889', '15/16/2019', '360');")
+RSQLite::dbSendQuery(myconn, "insert into GuestTransaction values (5, 1, '1575778667654323', '5/29/2020',1, '30/4/2020', '43889.53', '12/16/2019', '700');")
+RSQLite::dbSendQuery(myconn, "insert into GuestTransaction values (6, 1, '1575778667654323', '5/29/2020',1, '30/4/2020', '30888.53', '13/16/2019', '1000');")
+
+
+```
+
+##Insert into hotel table 
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn,"INSERT INTO Hotel VALUES 
+(1,'abc hotels','https://www.abchotels.com/','6786785432','4th avenue','hill road','new street','sulihull','bhg g09')")
+
+RSQLite::dbSendQuery(myconn,"INSERT INTO Hotel VALUES 
+(2,'def hotels','https://www.defhotels.com/','678672312','4th kingston','hill road','city center','spa','bhg g34')")
+
+RSQLite::dbSendQuery(myconn,"INSERT INTO Hotel VALUES 
+(3,'geh hotels','https://www.gehhotels.com/','6786784534','4th algebra','hill road','wbs','london','bhg g84')")
+
+RSQLite::dbSendQuery(myconn,"INSERT INTO Hotel VALUES 
+(4,'hij hotels','https://www.hijhotels.com/','6786897898','4th road','hill road','art center','warwick','bhg g56')")
+
+RSQLite::dbSendQuery(myconn,"INSERT INTO Hotel VALUES 
+(5,'klm hotels','https://www.klmhotels.com/','678623421','4th block','hill road','sulihull','coventry','bhg g23')")
+
+```
+
+
+
+
+##Insert into Transaction_Description table 
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "INSERT INTO Transaction_Description VALUES (1,'Cash')")
+RSQLite::dbSendQuery(myconn, "INSERT INTO Transaction_Description VALUES (2,'Bar')")
+RSQLite::dbSendQuery(myconn, "INSERT INTO Transaction_Description VALUES (3,'Seminar Hall')")
+RSQLite::dbSendQuery(myconn, "INSERT INTO Transaction_Description VALUES (4,'Banquet')")
+RSQLite::dbSendQuery(myconn, "INSERT INTO Transaction_Description VALUES (5,'Swimming pool')")
+RSQLite::dbSendQuery(myconn, "INSERT INTO Transaction_Description VALUES (6,'Spa')")
+
+```
+
+##Insert into Invoice table 
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "INSERT INTO Invoice VALUES 
+(1,1,1,'dushant gohri',40,0,4,6,'2020-11-15')");
+RSQLite::dbSendQuery(myconn, "INSERT INTO Invoice VALUES 
+(2,2,2,'rashi gohri',140,0,4,6,'2020-11-15')");
+RSQLite::dbSendQuery(myconn, "INSERT INTO Invoice VALUES 
+(3,1,1,'dushant gohri',40,0,4,6,'2020-11-15')");
+RSQLite::dbSendQuery(myconn, "INSERT INTO Invoice VALUES 
+(4,1,1,'dushant gohri',40,0,4,6,'2020-11-15')");
+RSQLite::dbSendQuery(myconn, "INSERT INTO Invoice VALUES 
+(5,1,1,'dushant gohri',40,0,4,6,'2020-11-15')");
+RSQLite::dbSendQuery(myconn, "INSERT INTO Invoice VALUES 
+(6,1,1,'dushant gohri',40,0,4,6,'2020-11-15')");
+
+```
+
+##Insert into Reservation table 
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "insert into Reservation values (1, 1, 1, 1, '28/8/2020', '30/8/2020', 1, 'ut volutpat', 'non ligula', 'eu est congue', 'eget semper', 5576864946411916, '8/25/2020', '7/13/2020', 3)");
+
+
+RSQLite::dbSendQuery(myconn, "insert into Reservation  values (2, 2, 2, 2, '15/8/2020', '18/8/2020', 2, 'posuere cubilia', '', 'metus', 'magna at nunc', 1061500478900525, '3/4/2020', '12/16/2019', 4)")
+
+RSQLite::dbSendQuery(myconn, "insert into Reservation  values (3, 3, 3, 3, '25/8/2020', '28/8/2020', 3, 'posuere cubilia', '', 'metus', 'magna at nunc', 1061500478900525, '3/4/2020', '12/16/2019', 4)")
+
+RSQLite::dbSendQuery(myconn, "insert into Reservation  values (4, 4, 4, 4, '17/8/2020', '15/9/2020', 4, 'posuere cubilia', '', 'metus', 'magna at nunc', 1061500478900525, '3/4/2020', '12/16/2019', 4)")
+
+RSQLite::dbSendQuery(myconn, "insert into Reservation  values (5, 5, 5, 5, '18/8/2020', '25/3/2021', 5, 'posuere cubilia', '', 'metus', 'magna at nunc', 1061500478900525, '3/4/2020', '12/16/2019', 4)")
+```
+
+##Insert into Room table 
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "insert into Room  values (1, 1, 12709804140, 'platea dictumst', 1, TRUE, 14, 36648, TRUE, 1)");
+
+RSQLite::dbSendQuery(myconn, "insert into Room  values (2, 2, 1270980414, 'platea dictumst', 2, TRUE, 14, 3665, TRUE, 2)");
+
+RSQLite::dbSendQuery(myconn, "insert into Room  values (3, 3, 127098040, 'platea dictumst', 2, TRUE, 14, 3623, TRUE, 3)");
+
+RSQLite::dbSendQuery(myconn, "insert into Room  values (4, 4, 12709804, 'platea dictumst', 1, FALSE, 14, 3876, TRUE, 4)");
+
+RSQLite::dbSendQuery(myconn, "insert into Room  values (5, 5, 12709840, 'platea dictumst', 1, TRUE, 14, 36975, TRUE, 5)");
+
+```
+
+##Insert into AdditionalGuest table 
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbSendQuery(myconn, "insert into AdditionalGuest values (1, 1, 'Nickey', 'enim', 'Chaize',1, '12/16/2019', '12/18/2019')");
+RSQLite::dbSendQuery(myconn, "insert into AdditionalGuest values (2, 2, 'Nickey', 'enim', 'Chaize',2, '12/16/2019', '12/18/2019')");
+RSQLite::dbSendQuery(myconn, "insert into AdditionalGuest values (3, 3, 'Nickey', 'enim', 'Chaize',3, '12/16/2019', '12/18/2019')");
+RSQLite::dbSendQuery(myconn, "insert into AdditionalGuest values (4, 4, 'Nickey', 'enim', 'Chaize',4, '12/16/2019', '12/18/2019')");
+RSQLite::dbSendQuery(myconn, "insert into AdditionalGuest values (5, 5, 'Nickey', 'enim', 'Chaize',5, '12/16/2019', '12/18/2019')");
+RSQLite::dbSendQuery(myconn, "insert into AdditionalGuest values (6, 6, 'Nickey', 'enim', 'Chaize',5, '12/16/2019', '12/18/2019')");
+
+```
+
+#using select command on hotel table to see if the insert command works properly and connection is established
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbGetQuery(myconn, "SELECT * FROM `hotel`")
+
+```
+
+#Disconnect to SQLite
+```{r  Eval=FALSE, warning=FALSE}
+
+RSQLite::dbDisconnect(myconn)
+
+``` 

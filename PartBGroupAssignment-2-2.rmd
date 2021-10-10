@@ -1,0 +1,103 @@
+---
+title: "R_PartB"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+Installing necessary packages for Part B to work,
+
+```{r cars}
+install.packages("tidyverse")
+install.packages("janitor")
+library("tidyverse")
+library("readxl")
+library("dplyr")
+library("janitor")
+
+```
+
+## Craeted a for loop , so that i can have the path of the all the files in one dataframe 
+
+```{r pressure, echo=FALSE}
+dirs<- list.dirs( "/cloud/project/group_assignment")
+AllFilesPath = data.frame()
+for(i in 1:length(dirs)){
+  file_names <- list.files(dirs[i], pattern = "\\.xlsx$")
+    if(length(file_names)!=0){
+      fullfilePath<-paste(dirs[i],file_names, sep="/")
+      df <- data.frame(fullfilePath)
+      AllFilesPath <- rbind(AllFilesPath,df)
+    }
+}
+
+
+```
+
+Created a for loop again for reading the excel file individually as all the excel files are similar we can also apply necessary operations like removing a column/row in the same loop, so that we can have a structured data frame of all the data
+
+```{r pressure2}
+
+readingFiles = data.frame()
+for ( ExcelFilePath in AllFilesPath$fullfilePath){
+  file <- read_excel(ExcelFilePath, col_names = FALSE)
+  file<-file[,-2]
+  file<-mutate(file, Country=paste(file[5,2]),Flow=paste(file[3,2]))
+  file<-file[-c(1,2,3,4,5,7),]
+  file[file == ".."]<-NA
+  
+  readingFiles <- rbind(readingFiles, file)
+}
+
+head(readingFiles)
+
+```
+now adding the country and flow column in the dataframe and removing duplicate row instances from the data frame.
+
+```{r pressure3, echo=FALSE}
+readingFiles<-row_to_names(readingFiles,1)
+
+names(readingFiles)[1]<-"year"
+names(readingFiles)[67]<-"country"
+names(readingFiles)[68]<-"flow"
+
+readingFiles1<-unique(readingFiles)
+
+head(readingFiles1)
+
+
+
+```
+finally, we have the data frame of our need, we need to apply the pivot longer function on the data frame and count the actual rows produced with all the excel data
+
+```{r pressure4, echo=FALSE}
+
+
+final <- readingFiles1 %>% pivot_longer(-c(country,year,flow),names_to ="product") %>% select(country, everything()) 
+
+
+head(final)
+##records : 623285
+
+
+```
+
+using pivot_wider function to find out the number of records for each product across countries across years
+
+```{r pressure5, echo=FALSE}
+
+
+final2<-final %>% pivot_wider(names_from=country, values_from=product)
+
+head(final2)
+
+##records: 76620
+```
